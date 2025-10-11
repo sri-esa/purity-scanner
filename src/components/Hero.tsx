@@ -1,19 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Zap } from "lucide-react";
-import heroImage from "@/assets/hero-spectroscopy.jpg";
 
 export const Hero = () => {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image with Overlay */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={heroImage} 
-          alt="Advanced spectroscopy equipment with holographic data visualization" 
-          className="w-full h-full object-cover opacity-40"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background" />
-      </div>
+      {/* Background Gradient */}
+      <div className="absolute inset-0 z-0 gradient-accent" />
 
       {/* Grid Pattern Overlay */}
       <div className="absolute inset-0 z-0 opacity-20"
