@@ -8,7 +8,12 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "docker:dev": "./scripts/docker-dev.sh",
+    "docker:prod": "./scripts/docker-prod.sh",
+    "docker:clean": "./scripts/docker-clean.sh",
+    "docker:build": "docker build -t purity-vision-lab .",
+    "docker:run": "docker run -p 80:80 purity-vision-lab"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -41,6 +46,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@supabase/supabase-js": "^2.75.0",
     "@tanstack/react-query": "^5.83.0",
+    "better-auth": "^1.3.27",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

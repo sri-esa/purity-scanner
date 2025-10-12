@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Development service
+  purity-vision-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: purity-vision-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_APP_URL=http://localhost:5173
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+      - VITE_GOOGLE_CLIENT_SECRET=${VITE_GOOGLE_CLIENT_SECRET}
+      - VITE_GITHUB_CLIENT_ID=${VITE_GITHUB_CLIENT_ID}
+      - VITE_GITHUB_CLIENT_SECRET=${VITE_GITHUB_CLIENT_SECRET}
+    command: npm run dev
+    networks:
+      - purity-vision-network
+
+  # Production service
+  purity-vision-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: purity-vision-prod
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - purity-vision-network
+    profiles:
+      - production
+
+networks:
+  purity-vision-network:
+    driver: bridge

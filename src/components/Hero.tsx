@@ -47,7 +47,7 @@ export const Hero = () => {
               variant="hero" 
               size="lg" 
               className="text-lg px-8 py-6 h-auto"
-              onClick={() => navigate("/get-started")}
+              onClick={() => navigate("/sign-up")}
             >
               Get Started
               <ArrowRight className="w-5 h-5 ml-2" />
@@ -56,9 +56,9 @@ export const Hero = () => {
               variant="heroOutline" 
               size="lg" 
               className="text-lg px-8 py-6 h-auto"
-              onClick={() => navigate("/get-started")}
+              onClick={() => navigate("/sign-in")}
             >
-              View Demo
+              Sign In
             </Button>
           </div>
 

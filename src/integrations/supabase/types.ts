@@ -7,14 +7,450 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_results: {
+        Row: {
+          id: string
+          session_id: string
+          purity_percentage: number
+          confidence_score: number
+          processing_time_ms: number | null
+          ml_model_version: string | null
+          contaminants: Json | null
+          spectral_quality_score: number | null
+          baseline_correction_applied: boolean
+          denoising_applied: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          purity_percentage: number
+          confidence_score: number
+          processing_time_ms?: number | null
+          ml_model_version?: string | null
+          contaminants?: Json | null
+          spectral_quality_score?: number | null
+          baseline_correction_applied?: boolean
+          denoising_applied?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          purity_percentage?: number
+          confidence_score?: number
+          processing_time_ms?: number | null
+          ml_model_version?: string | null
+          contaminants?: Json | null
+          spectral_quality_score?: number | null
+          baseline_correction_applied?: boolean
+          denoising_applied?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_results_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      analysis_sessions: {
+        Row: {
+          id: string
+          device_id: string
+          user_id: string | null
+          material_id: string | null
+          session_name: string | null
+          status: Database["public"]["Enums"]["analysis_status"]
+          started_at: string
+          completed_at: string | null
+          notes: string | null
+          metadata: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          device_id: string
+          user_id?: string | null
+          material_id?: string | null
+          session_name?: string | null
+          status?: Database["public"]["Enums"]["analysis_status"]
+          started_at?: string
+          completed_at?: string | null
+          notes?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          device_id?: string
+          user_id?: string | null
+          material_id?: string | null
+          session_name?: string | null
+          status?: Database["public"]["Enums"]["analysis_status"]
+          started_at?: string
+          completed_at?: string | null
+          notes?: string | null
+          metadata?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_sessions_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analysis_sessions_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analysis_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      device_logs: {
+        Row: {
+          id: string
+          device_id: string
+          log_level: string
+          message: string
+          context: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          device_id: string
+          log_level: string
+          message: string
+          context?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          device_id?: string
+          log_level?: string
+          message?: string
+          context?: Json
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      devices: {
+        Row: {
+          id: string
+          name: string
+          serial_number: string
+          model: string | null
+          firmware_version: string | null
+          status: Database["public"]["Enums"]["device_status"]
+          last_seen: string | null
+          location: string | null
+          organization_id: string
+          settings: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          serial_number: string
+          model?: string | null
+          firmware_version?: string | null
+          status?: Database["public"]["Enums"]["device_status"]
+          last_seen?: string | null
+          location?: string | null
+          organization_id: string
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          serial_number?: string
+          model?: string | null
+          firmware_version?: string | null
+          status?: Database["public"]["Enums"]["device_status"]
+          last_seen?: string | null
+          location?: string | null
+          organization_id?: string
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      materials: {
+        Row: {
+          id: string
+          name: string
+          chemical_formula: string | null
+          cas_number: string | null
+          description: string | null
+          category: string | null
+          expected_purity_range: Json | null
+          spectral_reference: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          chemical_formula?: string | null
+          cas_number?: string | null
+          description?: string | null
+          category?: string | null
+          expected_purity_range?: Json | null
+          spectral_reference?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          chemical_formula?: string | null
+          cas_number?: string | null
+          description?: string | null
+          category?: string | null
+          expected_purity_range?: Json | null
+          spectral_reference?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      organizations: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          industry: string | null
+          address: Json | null
+          contact_info: Json | null
+          settings: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          industry?: string | null
+          address?: Json | null
+          contact_info?: Json | null
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          industry?: string | null
+          address?: Json | null
+          contact_info?: Json | null
+          settings?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          id: string
+          session_id: string
+          user_id: string | null
+          title: string
+          format: Database["public"]["Enums"]["report_format"]
+          file_path: string | null
+          file_size_bytes: number | null
+          generated_at: string
+          download_count: number
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          user_id?: string | null
+          title: string
+          format?: Database["public"]["Enums"]["report_format"]
+          file_path?: string | null
+          file_size_bytes?: number | null
+          generated_at?: string
+          download_count?: number
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          user_id?: string | null
+          title?: string
+          format?: Database["public"]["Enums"]["report_format"]
+          file_path?: string | null
+          file_size_bytes?: number | null
+          generated_at?: string
+          download_count?: number
+          metadata?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      spectral_data: {
+        Row: {
+          id: string
+          session_id: string
+          wavelength: number
+          intensity: number
+          timestamp: string
+          data_point_index: number | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          wavelength: number
+          intensity: number
+          timestamp?: string
+          data_point_index?: number | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          wavelength?: number
+          intensity?: number
+          timestamp?: string
+          data_point_index?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spectral_data_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      system_metrics: {
+        Row: {
+          id: string
+          device_id: string
+          metric_name: string
+          metric_value: number
+          unit: string | null
+          timestamp: string
+        }
+        Insert: {
+          id?: string
+          device_id: string
+          metric_name: string
+          metric_value: number
+          unit?: string | null
+          timestamp?: string
+        }
+        Update: {
+          id?: string
+          device_id?: string
+          metric_name?: string
+          metric_value?: number
+          unit?: string | null
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_metrics_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      users: {
+        Row: {
+          id: string
+          email: string
+          full_name: string | null
+          avatar_url: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          organization_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          email: string
+          full_name?: string | null
+          avatar_url?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          organization_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          email?: string
+          full_name?: string | null
+          avatar_url?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          organization_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +459,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      analysis_status: "pending" | "processing" | "completed" | "failed"
+      device_status: "online" | "offline" | "maintenance" | "error"
+      report_format: "pdf" | "csv" | "json"
+      user_role: "admin" | "operator" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never

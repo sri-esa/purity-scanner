@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { useRealtimeAnalytics } from "@/hooks/useRealtimeAnalytics";
 
 // Sample purity analysis data
 const purityOverTime = [
@@ -31,6 +32,36 @@ const accuracyMetrics = [
 ];
 
 export const DataAnalytics = () => {
+  const { analyticsData, loading } = useRealtimeAnalytics();
+
+  // Use real data if available, otherwise fall back to sample data
+  const purityOverTime = analyticsData?.purityTrends || [
+    { time: "0s", purity: 0, baseline: 0 },
+    { time: "0.5s", purity: 45, baseline: 50 },
+    { time: "1s", purity: 78, baseline: 75 },
+    { time: "1.5s", purity: 91, baseline: 87.5 },
+    { time: "2s", purity: 96.2, baseline: 93.75 },
+    { time: "2.5s", purity: 97.8, baseline: 96.87 },
+    { time: "3s", purity: 98.4, baseline: 98.43 },
+  ];
+
+  const materialComparison = analyticsData?.materialComparison || [
+    { material: "Acetone", purity: 98.4, samples: 45 },
+    { material: "Ethanol", purity: 96.8, samples: 38 },
+    { material: "Methanol", purity: 97.2, samples: 42 },
+    { material: "Benzene", purity: 95.6, samples: 31 },
+    { material: "Toluene", purity: 94.8, samples: 28 },
+  ];
+
+  const accuracyMetrics = analyticsData?.accuracyMetrics || [
+    { metric: "Week 1", accuracy: 92.3 },
+    { metric: "Week 2", accuracy: 93.8 },
+    { metric: "Week 3", accuracy: 94.5 },
+    { metric: "Week 4", accuracy: 95.2 },
+    { metric: "Week 5", accuracy: 96.1 },
+    { metric: "Week 6", accuracy: 95.8 },
+  ];
+
   return (
     <section id="analytics" className="py-24 relative">
       <div className="container mx-auto px-4">
@@ -192,15 +223,21 @@ export const DataAnalytics = () => {
         {/* Key Insights */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl mx-auto mt-8">
           <Card className="p-6 bg-card border-border text-center space-y-2">
-            <div className="text-4xl font-bold text-gradient-primary">98.4%</div>
+            <div className="text-4xl font-bold text-gradient-primary">
+              {analyticsData?.systemHealth.averagePurity.toFixed(1) || "98.4"}%
+            </div>
             <div className="text-sm text-muted-foreground">Average Purity Detected</div>
           </Card>
           <Card className="p-6 bg-card border-border text-center space-y-2">
-            <div className="text-4xl font-bold text-gradient-secondary">95.8%</div>
+            <div className="text-4xl font-bold text-gradient-secondary">
+              {analyticsData?.systemHealth.modelAccuracy || "95.8"}%
+            </div>
             <div className="text-sm text-muted-foreground">Model Accuracy Rate</div>
           </Card>
           <Card className="p-6 bg-card border-border text-center space-y-2">
-            <div className="text-4xl font-bold text-gradient-accent">184</div>
+            <div className="text-4xl font-bold text-gradient-accent">
+              {analyticsData?.systemHealth.samplesAnalyzed || 184}
+            </div>
             <div className="text-sm text-muted-foreground">Samples Analyzed</div>
           </Card>
         </div>
