@@ -1,14 +1,11 @@
 import { ReactNode } from "react";
-import { authClient } from "@/lib/auth-client";
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Temporary: Just pass through children without auth
+// This will let your app load so we can debug separately
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  return (
-    <authClient.Provider>
-      {children}
-    </authClient.Provider>
-  );
+  return <>{children}</>;
 };

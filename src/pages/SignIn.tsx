@@ -9,7 +9,7 @@ import { Eye, EyeOff, Loader2, Zap } from "lucide-react";
 import { signIn } from "@/lib/auth-client";
 import { toast } from "sonner";
 
-export const SignIn = () => {
+const SignIn = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -214,3 +214,5 @@ export const SignIn = () => {
     </div>
   );
 };
+
+export default SignIn;

@@ -17,7 +17,7 @@ RUN npm ci
 COPY . .
 
 # Expose development port
-EXPOSE 5173
+EXPOSE 8080
 
-# Start development server
+# Start development server with explicit host binding
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

@@ -1,23 +1,20 @@
-version: '3.8'
-
 services:
   # Development service
   purity-vision-dev:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: dev
+      dockerfile: Dockerfile.dev  # Changed from Dockerfile with target: dev
     container_name: purity-vision-dev
     ports:
-      - "5173:5173"
+      - "8080:8080"  # Changed from 5173:5173 to match vite.config.ts
     volumes:
       - .:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      - VITE_APP_URL=http://localhost:5173
-      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - VITE_APP_URL=http://localhost:8080  # Changed from 5173 to 8080
+      - VITE_SUPABASE_URL=https://rlwobxqfsecmhmqtazni.supabase.co
+      - VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsd29ieHFmc2VjbWhtcXRhem5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMjExODksImV4cCI6MjA3NTc5NzE4OX0.vKsdmkgOKnvANOYsrug7a96y3GsNQbqcOkoYpL3oF7U
       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
       - VITE_GOOGLE_CLIENT_SECRET=${VITE_GOOGLE_CLIENT_SECRET}
       - VITE_GITHUB_CLIENT_ID=${VITE_GITHUB_CLIENT_ID}

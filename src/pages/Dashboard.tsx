@@ -27,8 +27,21 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export const Dashboard = () => {
-  const { user, isAuthenticated, isLoading, signOut } = useAuth();
+// Extended user type with role
+interface ExtendedUser {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  emailVerified: boolean;
+  name: string;
+  email?: string;
+  image?: string;
+  role?: "admin" | "operator" | "viewer";
+}
+
+const Dashboard = () => {
+  const { user: authUser, isAuthenticated, isLoading, signOut } = useAuth();
+  const user = authUser as ExtendedUser;
   const navigate = useNavigate();
   
   // Sync user to Supabase
@@ -318,3 +331,5 @@ export const Dashboard = () => {
     </div>
   );
 };
+
+export default Dashboard;
