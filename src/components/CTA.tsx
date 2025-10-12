@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Mail } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const CTA = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="py-24 relative overflow-hidden">
       {/* Background Gradient */}
@@ -31,11 +34,20 @@ export const CTA = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <Button variant="hero" size="lg" className="text-lg px-8 py-6 h-auto">
+            <Button 
+              variant="hero" 
+              size="lg" 
+              className="text-lg px-8 py-6 h-auto"
+              onClick={() => navigate("/get-started")}
+            >
               View Research
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <Button variant="heroOutline" size="lg" className="text-lg px-8 py-6 h-auto">
+            <Button 
+              variant="heroOutline" 
+              size="lg" 
+              className="text-lg px-8 py-6 h-auto"
+            >
               <Mail className="w-5 h-5 mr-2" />
               Contact Team
             </Button>
