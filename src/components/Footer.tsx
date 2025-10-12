@@ -1,4 +1,4 @@
-import { Github, Linkedin, Twitter } from "lucide-react";
+import { Github, Linkedin, X } from "lucide-react";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -23,18 +23,18 @@ export const Footer = () => {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><a href="#features" className="hover:text-primary transition-colors">Features</a></li>
               <li><a href="#how-it-works" className="hover:text-primary transition-colors">How It Works</a></li>
-              <li><a href="#tech-specs" className="hover:text-primary transition-colors">Tech Specs</a></li>
+              <li><a href="#analytics" className="hover:text-primary transition-colors">Analytics</a></li>
               <li><a href="#use-cases" className="hover:text-primary transition-colors">Use Cases</a></li>
             </ul>
           </div>
 
           {/* Company */}
           <div className="space-y-4">
-            <h4 className="font-semibold">Company</h4>
+            <h4 className="font-semibold">Project</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><a href="#" className="hover:text-primary transition-colors">About</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Blog</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Careers</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Research</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Documentation</a></li>
               <li><a href="#" className="hover:text-primary transition-colors">Contact</a></li>
             </ul>
           </div>
@@ -44,9 +44,9 @@ export const Footer = () => {
             <h4 className="font-semibold">Resources</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><a href="#" className="hover:text-primary transition-colors">Documentation</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">API Reference</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Support</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Status</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Publications</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Datasets</a></li>
+              <li><a href="#" className="hover:text-primary transition-colors">Code Repository</a></li>
             </ul>
           </div>
         </div>
@@ -69,9 +69,9 @@ export const Footer = () => {
             <a 
               href="#" 
               className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center hover:border-primary hover:glow-primary transition-all duration-300"
-              aria-label="Twitter"
+              aria-label="X (Twitter)"
             >
-              <Twitter className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </a>
             <a 
               href="#" 

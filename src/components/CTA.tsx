@@ -20,25 +20,24 @@ export const CTA = () => {
         <div className="max-w-4xl mx-auto text-center space-y-8">
           {/* Heading */}
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold">
-            Ready to Transform Your{" "}
-            <span className="text-gradient-primary">Quality Control?</span>
+            Advancing <span className="text-gradient-primary">Chemical Analysis</span> Research
           </h2>
 
           {/* Description */}
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Join leading laboratories and manufacturers who trust our AI-powered purity analysis 
-            for mission-critical quality assurance.
+            Contributing to accessible, accurate quality control solutions for laboratories 
+            and research facilities worldwide.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             <Button variant="hero" size="lg" className="text-lg px-8 py-6 h-auto">
-              Request Demo
+              View Research
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Button variant="heroOutline" size="lg" className="text-lg px-8 py-6 h-auto">
               <Mail className="w-5 h-5 mr-2" />
-              Contact Sales
+              Contact Team
             </Button>
           </div>
 
@@ -46,15 +45,15 @@ export const CTA = () => {
           <div className="pt-8 flex flex-col sm:flex-row gap-6 justify-center items-center text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-secondary" />
-              <span>No credit card required</span>
+              <span>Open-source project</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-secondary" />
-              <span>Setup in minutes</span>
+              <span>Academic research</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-secondary" />
-              <span>24/7 support</span>
+              <span>Reproducible results</span>
             </div>
           </div>
         </div>

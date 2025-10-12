@@ -34,8 +34,8 @@ export const Hero = () => {
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Portable AI-powered spectroscopy system delivers non-destructive chemical purity testing 
-            with <span className="text-secondary font-semibold">95% accuracy</span> and stunning 3D visualization.
+            Solving real-world chemical quality control challenges with affordable AI-powered spectroscopy 
+            achieving <span className="text-secondary font-semibold">95% accuracy</span> in under 3 seconds.
           </p>
 
           {/* CTA Buttons */}
