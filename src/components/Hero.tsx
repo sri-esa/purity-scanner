@@ -32,13 +32,13 @@ export const Hero = () => {
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold leading-tight">
             Real-Time{" "}
             <span className="text-gradient-primary">Purity Analysis</span>
-            {" "}in Under 3 Seconds
+            {" "}in Under Few Seconds
           </h1>
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Solving real-world chemical quality control challenges with affordable AI-powered spectroscopy 
-            achieving <span className="text-secondary font-semibold">95% accuracy</span> in under 3 seconds.
+            achieving <span className="text-secondary font-semibold">95% accuracy</span> in under few seconds.
           </p>
 
           {/* CTA Buttons */}
