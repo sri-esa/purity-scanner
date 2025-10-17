@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.git
+.gitignore
+README.md
+tests/
+notebooks/
+docs/
+*.ipynb
+logs/
+data/raw/
