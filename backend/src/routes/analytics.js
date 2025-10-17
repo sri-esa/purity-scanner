@@ -1,39 +1,59 @@
 // backend/src/routes/analytics.js
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { withOrg } from '../middleware/withOrg.js';
 import { supabase } from '../config/supabase.js';
 
 const router = express.Router();
-router.use(authenticate);
+router.use(authenticate, withOrg);
 
-router.get('/stats/:userId', async (req, res, next) => {
+// Organization-wide stats (no userId param needed, uses req.orgId)
+router.get('/stats', async (req, res, next) => {
   try {
-    const { userId } = req.params;
-    if (req.user.id !== userId) return res.status(403).json({ error: 'Unauthorized' });
+    // Get device IDs for this org
+    const { data: devices } = await supabase
+      .from('devices')
+      .select('id')
+      .eq('organization_id', req.orgId);
+    const deviceIds = (devices || []).map(d => d.id);
+    if (deviceIds.length === 0) return res.json({ success: true, stats: { total_sessions: 0, average_purity: 0, last_session: null, purity_distribution: { high: 0, medium: 0, low: 0 }, sample_types: {} } });
 
-    const { count: totalScans } = await supabase
-      .from('scans')
+    // Count total completed sessions
+    const { count: totalSessions } = await supabase
+      .from('analysis_sessions')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .in('device_id', deviceIds)
+      .eq('status', 'completed');
 
-    const { data: scans } = await supabase
-      .from('scans')
-      .select('purity_score, scanned_at, sample_type')
-      .eq('user_id', userId)
-      .order('scanned_at', { ascending: false });
+    // Get sessions with results for analysis
+    const { data: sessionsWithResults } = await supabase
+      .from('analysis_sessions')
+      .select(`
+        id, started_at, metadata,
+        analysis_results!inner(purity_percentage)
+      `)
+      .in('device_id', deviceIds)
+      .eq('status', 'completed')
+      .order('started_at', { ascending: false });
 
-    const avgPurity = scans && scans.length > 0
-      ? scans.reduce((sum, s) => sum + s.purity_score, 0) / scans.length
+    const results = sessionsWithResults?.map(s => ({
+      purity_score: s.analysis_results[0]?.purity_percentage || 0,
+      started_at: s.started_at,
+      sample_type: s.metadata?.sample_type || 'unknown'
+    })) || [];
+
+    const avgPurity = results.length > 0
+      ? results.reduce((sum, r) => sum + r.purity_score, 0) / results.length
       : 0;
 
     const purityDistribution = {
-      high: scans?.filter(s => s.purity_score >= 90).length || 0,
-      medium: scans?.filter(s => s.purity_score >= 70 && s.purity_score < 90).length || 0,
-      low: scans?.filter(s => s.purity_score < 70).length || 0
+      high: results.filter(r => r.purity_score >= 90).length,
+      medium: results.filter(r => r.purity_score >= 70 && r.purity_score < 90).length,
+      low: results.filter(r => r.purity_score < 70).length
     };
 
-    const sampleTypes = scans?.reduce((acc, s) => {
-      const type = s.sample_type || 'unknown';
+    const sampleTypes = results.reduce((acc, r) => {
+      const type = r.sample_type || 'unknown';
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {});
@@ -41,11 +61,11 @@ router.get('/stats/:userId', async (req, res, next) => {
     res.json({
       success: true,
       stats: {
-        total_scans: totalScans || 0,
+        total_sessions: totalSessions || 0,
         average_purity: Math.round(avgPurity * 100) / 100,
-        last_scan: scans?.[0]?.scanned_at || null,
+        last_session: results[0]?.started_at || null,
         purity_distribution: purityDistribution,
-        sample_types: sampleTypes || {}
+        sample_types: sampleTypes
       }
     });
   } catch (err) {
@@ -53,11 +73,9 @@ router.get('/stats/:userId', async (req, res, next) => {
   }
 });
 
-router.get('/trends/:userId', async (req, res, next) => {
+router.get('/trends', async (req, res, next) => {
   try {
-    const { userId } = req.params;
     const { period = 'week' } = req.query;
-    if (req.user.id !== userId) return res.status(403).json({ error: 'Unauthorized' });
 
     const now = new Date();
     let startDate = new Date();
@@ -73,16 +91,34 @@ router.get('/trends/:userId', async (req, res, next) => {
         break;
     }
 
-    const { data: scans } = await supabase
-      .from('scans')
-      .select('purity_score, scanned_at')
-      .eq('user_id', userId)
-      .gte('scanned_at', startDate.toISOString())
-      .order('scanned_at', { ascending: true });
+    // Get device IDs for this org
+    const { data: devices } = await supabase
+      .from('devices')
+      .select('id')
+      .eq('organization_id', req.orgId);
+    const deviceIds = (devices || []).map(d => d.id);
+    if (deviceIds.length === 0) return res.json({ success: true, trends: [], period, start_date: startDate.toISOString(), end_date: now.toISOString() });
+
+    // Get sessions with results in time range
+    const { data: sessionsWithResults } = await supabase
+      .from('analysis_sessions')
+      .select(`
+        started_at,
+        analysis_results!inner(purity_percentage)
+      `)
+      .in('device_id', deviceIds)
+      .eq('status', 'completed')
+      .gte('started_at', startDate.toISOString())
+      .order('started_at', { ascending: true });
+
+    const trends = sessionsWithResults?.map(s => ({
+      purity_score: s.analysis_results[0]?.purity_percentage || 0,
+      scanned_at: s.started_at
+    })) || [];
 
     res.json({
       success: true,
-      trends: scans || [],
+      trends,
       period,
       start_date: startDate.toISOString(),
       end_date: now.toISOString()
@@ -92,38 +128,75 @@ router.get('/trends/:userId', async (req, res, next) => {
   }
 });
 
-router.get('/activity/:userId', async (req, res, next) => {
+router.get('/activity', async (req, res, next) => {
   try {
-    const { userId } = req.params;
     const { limit = 10 } = req.query;
-    if (req.user.id !== userId) return res.status(403).json({ error: 'Unauthorized' });
 
-    const { data: recentScans } = await supabase
-      .from('scans')
-      .select('id, sample_name, purity_score, scanned_at, is_flagged')
-      .eq('user_id', userId)
-      .order('scanned_at', { ascending: false })
+    // Get device IDs for this org
+    const { data: devices } = await supabase
+      .from('devices')
+      .select('id')
+      .eq('organization_id', req.orgId);
+    const deviceIds = (devices || []).map(d => d.id);
+    if (deviceIds.length === 0) return res.json({ success: true, activity: [] });
+
+    // Get recent sessions with results
+    const { data: recentSessions } = await supabase
+      .from('analysis_sessions')
+      .select(`
+        id, session_name, started_at,
+        analysis_results(purity_percentage)
+      `)
+      .in('device_id', deviceIds)
+      .eq('status', 'completed')
+      .order('started_at', { ascending: false })
       .limit(parseInt(limit));
 
-    res.json({ success: true, activity: recentScans || [] });
+    const activity = recentSessions?.map(s => ({
+      id: s.id,
+      sample_name: s.session_name,
+      purity_score: s.analysis_results?.[0]?.purity_percentage || 0,
+      scanned_at: s.started_at,
+      is_flagged: false // You can add flagging logic based on purity thresholds
+    })) || [];
+
+    res.json({ success: true, activity });
   } catch (err) {
     next(err);
   }
 });
 
-router.get('/flagged/:userId', async (req, res, next) => {
+router.get('/flagged', async (req, res, next) => {
   try {
-    const { userId } = req.params;
-    if (req.user.id !== userId) return res.status(403).json({ error: 'Unauthorized' });
+    // Get device IDs for this org
+    const { data: devices } = await supabase
+      .from('devices')
+      .select('id')
+      .eq('organization_id', req.orgId);
+    const deviceIds = (devices || []).map(d => d.id);
+    if (deviceIds.length === 0) return res.json({ success: true, flagged_sessions: [], total: 0 });
 
-    const { data: flaggedScans, count } = await supabase
-      .from('scans')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('is_flagged', true)
-      .order('scanned_at', { ascending: false });
+    // Get sessions with low purity (flagged)
+    const { data: flaggedSessions, count } = await supabase
+      .from('analysis_sessions')
+      .select(`
+        id, session_name, started_at, metadata,
+        analysis_results!inner(purity_percentage)
+      `, { count: 'exact' })
+      .in('device_id', deviceIds)
+      .eq('status', 'completed')
+      .lt('analysis_results.purity_percentage', 70) // Flag sessions with purity < 70%
+      .order('started_at', { ascending: false });
 
-    res.json({ success: true, flagged_scans: flaggedScans || [], total: count || 0 });
+    const flagged = flaggedSessions?.map(s => ({
+      id: s.id,
+      session_name: s.session_name,
+      started_at: s.started_at,
+      purity_percentage: s.analysis_results[0]?.purity_percentage || 0,
+      sample_type: s.metadata?.sample_type || 'unknown'
+    })) || [];
+
+    res.json({ success: true, flagged_sessions: flagged, total: count || 0 });
   } catch (err) {
     next(err);
   }

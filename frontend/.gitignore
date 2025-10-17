@@ -1,27 +1,48 @@
-# Node / Vite
+# Frontend-specific .gitignore
+
+# Dependencies
 node_modules/
-dist/
-.vite/
 npm-debug.log*
+yarn-debug.log*
 yarn-error.log*
-package-lock.json
-yarn.lock
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.vite/
+.turbo/
 
 # TypeScript
 *.tsbuildinfo
 
-# React / frontend
+# Environment variables & secrets
 .env
 .env.*
 !.env.example
 !.env.example.*
 *.env.local
 *.env.*.local
-.DS_Store
+.env.production
+.env.development
+.env.staging
+
+# Supabase secrets
+supabase/.env
+supabase/config.toml
+supabase-service-key.json
+
+# API Keys (common frontend patterns)
+**/config/keys.js
+**/config/secrets.js
+**/src/config/api-keys.js
 
 # Docker
 # Ignore local images and volumes
 docker-compose.override.yml
+docker-compose.override.yaml
 *.log
 *.tmp
 **/tmp/

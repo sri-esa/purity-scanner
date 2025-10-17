@@ -1,0 +1,193 @@
+# ================================
+# ROOT .GITIGNORE - SECURITY FOCUSED
+# ================================
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+!.env.example.*
+*.env.local
+*.env.*.local
+.env.production
+.env.development
+.env.staging
+
+# API Keys & Credentials
+**/secrets/
+**/credentials/
+**/*secret*
+**/*key*
+**/*token*
+**/*password*
+**/*credential*
+!**/public-key*
+!**/package-lock.json
+!**/yarn.lock
+
+# Database & Supabase
+supabase/.env
+supabase/config.toml
+*.db
+*.sqlite
+*.sqlite3
+database.json
+supabase-service-key.json
+
+# Docker Secrets
+docker-compose.override.yml
+docker-compose.override.yaml
+docker-compose.prod.yml
+docker-compose.local.yml
+.dockerignore.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.vite/
+.turbo/
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+*.log.*
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Runtime data
+.npm
+.eslintcache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.history/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Backup files
+*.bak
+*.backup
+*.old
+*~
+
+# Test files with sensitive data
+test-secrets/
+test-credentials/
+*.test.env
+
+# Deployment files
+.vercel
+.netlify
+.firebase/
+.aws/
+.gcp/
+
+# Local development
+.local/
+local/
+dev-tools/
+
+# Package manager files (keep lock files for security)
+# node_modules/ already covered above
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Python (if any backend components)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json

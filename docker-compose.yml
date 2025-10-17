@@ -1,61 +1,86 @@
 services:
   backend:
-    image: node:18-alpine
-    working_dir: /app/backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: purity-vision-backend
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
-      - ./backend:/app/backend
+      - ./backend:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
       - PORT=3000
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-    command: sh -c "npm ci && npm run dev"
     networks:
       - purity-vision-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Development service
-  purity-vision-dev:
+  frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.dev  # Changed from Dockerfile with target: dev
-    container_name: purity-vision-dev
-    ports:
-      - "8080:8080"  # Changed from 5173:5173 to match vite.config.ts
-    volumes:
-      - ./frontend:/app/frontend
-      - /app/frontend/node_modules
-    environment:
-      - NODE_ENV=development
-      - VITE_APP_URL=http://localhost:8080  # Changed from 5173 to 8080
-      - VITE_SUPABASE_URL=https://rlwobxqfsecmhmqtazni.supabase.co
-      - VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsd29ieHFmc2VjbWhtcXRhem5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMjExODksImV4cCI6MjA3NTc5NzE4OX0.vKsdmkgOKnvANOYsrug7a96y3GsNQbqcOkoYpL3oF7U
-      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
-      - VITE_GOOGLE_CLIENT_SECRET=${VITE_GOOGLE_CLIENT_SECRET}
-      - VITE_GITHUB_CLIENT_ID=${VITE_GITHUB_CLIENT_ID}
-      - VITE_GITHUB_CLIENT_SECRET=${VITE_GITHUB_CLIENT_SECRET}
-    command: npm run dev
-    networks:
-      - purity-vision-network
-
-  # Production service
-  purity-vision-prod:
-    build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
-      target: runner
-    container_name: purity-vision-prod
+      args:
+        - VITE_SUPABASE_URL=https://rlwobxqfsecmhmqtazni.supabase.co
+        - VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsd29ieHFmc2VjbWhtcXRhem5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMjExODksImV4cCI6MjA3NTc5NzE4OX0.vKsdmkgOKnvANOYsrug7a96y3GsNQbqcOkoYpL3oF7U
+    container_name: purity-vision-frontend
     ports:
       - "80:80"
     environment:
       - NODE_ENV=production
     networks:
       - purity-vision-network
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Development services (optional)
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: purity-vision-frontend-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
+    networks:
+      - purity-vision-network
     profiles:
-      - production
+      - dev
+
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: purity-vision-backend-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    networks:
+      - purity-vision-network
+    profiles:
+      - dev
 
 networks:
   purity-vision-network:

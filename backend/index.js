@@ -13,6 +13,7 @@ import devicesRouter from './src/routes/devices.js';
 import analyticsRouter from './src/routes/analytics.js';
 import scansRouter from './src/routes/scans.js';
 import sessionsRouter from './src/routes/sessions.js';
+import setupRouter from './src/routes/setup.js';
 import { supabase, supabaseAuth } from './src/config/supabase.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 
@@ -46,6 +47,18 @@ app.get('/env-check', (req, res) => {
   });
 });
 
+// Public analyze endpoint (no auth required, no DB save)
+app.post('/api/analyze', async (req, res, next) => {
+  try {
+    const { wavelengths, intensities } = req.body || {};
+    const { analyzeSpectrum } = await import('./src/services/mlservice.js');
+    const result = await analyzeSpectrum({ wavelengths, intensities });
+    res.json({ success: true, result });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Root route - API information
 app.get('/', (req, res) => {
   const supabaseConfigured = !!(supabase && supabaseAuth);
@@ -60,7 +73,8 @@ app.get('/', (req, res) => {
       devices: supabaseConfigured ? '/api/devices' : 'unavailable (configure Supabase)',
       analytics: supabaseConfigured ? '/api/analytics' : 'unavailable (configure Supabase)',
       scans: supabaseConfigured ? '/api/scans' : 'unavailable (configure Supabase)',
-      sessions: supabaseConfigured ? '/api/sessions' : 'unavailable (configure Supabase)'
+      sessions: supabaseConfigured ? '/api/sessions' : 'unavailable (configure Supabase)',
+      setup: supabaseConfigured ? '/api/setup' : 'unavailable (configure Supabase)'
     },
     timestamp: new Date().toISOString(),
   });
@@ -72,6 +86,7 @@ if (supabase && supabaseAuth) {
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/scans', scansRouter);
   app.use('/api/sessions', sessionsRouter);
+  app.use('/api/setup', setupRouter);
 } else {
   app.use('/api', (req, res) => {
     res.status(503).json({ error: 'Supabase not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.' });

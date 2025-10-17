@@ -1,5 +1,87 @@
+# Backend-specific .gitignore
+
+# Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment variables & secrets
 .env
-.env.local
-*.log
+.env.*
+!.env.example
+*.env.local
+*.env.*.local
+.env.production
+.env.development
+.env.staging
+
+# Build outputs
 dist/
+build/
+.turbo/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Runtime data
+.npm
+.eslintcache
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+database.json
+
+# SSL certificates & keys
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Supabase secrets
+supabase/.env
+supabase/config.toml
+supabase-service-key.json
+
+# Docker
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Test secrets
+test-secrets/
+test-credentials/
+*.test.env
