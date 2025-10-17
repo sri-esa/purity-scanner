@@ -1,23 +1,25 @@
-# Development Dockerfile
+# Development Dockerfile (root-level)
 FROM node:18-alpine
 
 # Install dependencies
 RUN apk add --no-cache libc6-compat
 
 # Set working directory
-WORKDIR /app
+WORKDIR /app/frontend
 
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY frontend/package.json frontend/package-lock.json* ./
 
 # Install all dependencies (including dev dependencies)
 RUN npm ci
 
 # Copy source code
-COPY . .
+COPY frontend/. .
 
 # Expose development port
 EXPOSE 8080
 
 # Start development server with explicit host binding
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+

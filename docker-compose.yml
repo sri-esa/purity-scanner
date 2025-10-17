@@ -1,4 +1,22 @@
 services:
+  backend:
+    image: node:18-alpine
+    working_dir: /app/backend
+    container_name: purity-vision-backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    command: sh -c "npm ci && npm run dev"
+    networks:
+      - purity-vision-network
+
   # Development service
   purity-vision-dev:
     build:
@@ -8,8 +26,8 @@ services:
     ports:
       - "8080:8080"  # Changed from 5173:5173 to match vite.config.ts
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
     environment:
       - NODE_ENV=development
       - VITE_APP_URL=http://localhost:8080  # Changed from 5173 to 8080
