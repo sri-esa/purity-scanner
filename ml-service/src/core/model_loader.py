@@ -1,6 +1,8 @@
 import torch
 import joblib
 import json
+import time
+import numpy as np
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import logging
@@ -77,7 +79,10 @@ class ModelLoader:
             self._model.eval()
             self._model_type = "baseline"
             
-            logger.info("✅ Baseline model loaded successfully")
+            # Warmup model
+            await self._warmup_model()
+            
+            logger.info("✅ Baseline model loaded and warmed up successfully")
             
         except Exception as e:
             logger.error(f"Failed to load baseline model: {e}")
@@ -108,7 +113,11 @@ class ModelLoader:
             }
             
             self._model_type = "plsr"
-            logger.info("✅ PLSR model loaded successfully")
+            
+            # Warmup model
+            await self._warmup_model()
+            
+            logger.info("✅ PLSR model loaded and warmed up successfully")
             
         except Exception as e:
             logger.error(f"Failed to load PLSR model: {e}")
@@ -212,3 +221,151 @@ class ModelLoader:
         except Exception as e:
             logger.error(f"Failed to load model {model_name}: {e}")
             return False
+    
+    async def _warmup_model(self):
+        """
+        Warm up the model with dummy predictions to reduce first-inference latency
+        """
+        try:
+            logger.info("Warming up model...")
+            start_time = time.time()
+            
+            # Generate dummy spectrum data (typical Raman spectrum size)
+            dummy_spectrum = np.random.rand(1024).astype(np.float32)
+            
+            if self._model_type == "baseline":
+                # Warmup PyTorch model
+                with torch.no_grad():
+                    dummy_tensor = torch.FloatTensor(dummy_spectrum).unsqueeze(0)
+                    if settings.DEVICE == "cuda" and torch.cuda.is_available():
+                        dummy_tensor = dummy_tensor.cuda()
+                        self._model = self._model.cuda()
+                    
+                    # Run several warmup predictions
+                    for _ in range(3):
+                        _ = self._model(dummy_tensor)
+                    
+                    # Synchronize if using CUDA
+                    if settings.DEVICE == "cuda" and torch.cuda.is_available():
+                        torch.cuda.synchronize()
+            
+            elif self._model_type == "plsr":
+                # Warmup PLSR model
+                regressor = self._model["regressor"]
+                scaler = self._model.get("scaler")
+                
+                dummy_input = dummy_spectrum.reshape(1, -1)
+                if scaler:
+                    dummy_input = scaler.transform(dummy_input)
+                
+                # Run several warmup predictions
+                for _ in range(3):
+                    _ = regressor.predict(dummy_input)
+            
+            elif self._model_type == "mock":
+                # Mock warmup (just simulate some computation)
+                for _ in range(3):
+                    _ = np.mean(dummy_spectrum) + np.std(dummy_spectrum)
+            
+            warmup_time = time.time() - start_time
+            logger.info(f"Model warmup completed in {warmup_time:.3f} seconds")
+            
+        except Exception as e:
+            logger.warning(f"Model warmup failed (non-critical): {e}")
+    
+    @classmethod
+    def optimize_for_inference(cls):
+        """
+        Apply inference optimizations to the loaded model
+        """
+        instance = cls()
+        
+        if instance._model is None:
+            logger.warning("No model loaded for optimization")
+            return
+        
+        try:
+            if instance._model_type == "baseline" and isinstance(instance._model, torch.nn.Module):
+                logger.info("Optimizing PyTorch model for inference...")
+                
+                # Set to evaluation mode
+                instance._model.eval()
+                
+                # Disable gradient computation globally for inference
+                torch.set_grad_enabled(False)
+                
+                # Try to optimize with TorchScript (if supported)
+                try:
+                    dummy_input = torch.randn(1, 1024)  # Adjust size as needed
+                    if settings.DEVICE == "cuda" and torch.cuda.is_available():
+                        dummy_input = dummy_input.cuda()
+                    
+                    # Trace the model
+                    traced_model = torch.jit.trace(instance._model, dummy_input)
+                    traced_model.eval()
+                    
+                    # Replace model with traced version
+                    instance._model = traced_model
+                    logger.info("✅ Model optimized with TorchScript")
+                    
+                except Exception as e:
+                    logger.warning(f"TorchScript optimization failed: {e}")
+                
+                # Set optimal number of threads for CPU inference
+                if settings.DEVICE == "cpu":
+                    torch.set_num_threads(min(4, torch.get_num_threads()))
+            
+            logger.info("Model optimization completed")
+            
+        except Exception as e:
+            logger.error(f"Model optimization failed: {e}")
+    
+    @classmethod
+    def get_performance_stats(cls) -> Dict[str, Any]:
+        """
+        Get performance statistics for the loaded model
+        """
+        instance = cls()
+        
+        if instance._model is None:
+            return {"error": "No model loaded"}
+        
+        try:
+            stats = {
+                "model_type": instance._model_type,
+                "device": str(settings.DEVICE),
+                "model_info": instance._model_info or {}
+            }
+            
+            if instance._model_type == "baseline":
+                # PyTorch model stats
+                if hasattr(instance._model, 'parameters'):
+                    total_params = sum(p.numel() for p in instance._model.parameters())
+                    trainable_params = sum(p.numel() for p in instance._model.parameters() if p.requires_grad)
+                    stats.update({
+                        "total_parameters": total_params,
+                        "trainable_parameters": trainable_params,
+                        "model_size_mb": total_params * 4 / (1024 * 1024),  # Assuming float32
+                        "is_traced": hasattr(instance._model, '_c'),  # TorchScript indicator
+                    })
+                
+                if torch.cuda.is_available():
+                    stats.update({
+                        "cuda_available": True,
+                        "cuda_device_count": torch.cuda.device_count(),
+                        "current_device": torch.cuda.current_device() if settings.DEVICE == "cuda" else None
+                    })
+            
+            elif instance._model_type == "plsr":
+                # PLSR model stats
+                regressor = instance._model["regressor"]
+                stats.update({
+                    "n_components": getattr(regressor, 'n_components', None),
+                    "has_scaler": instance._model.get("scaler") is not None
+                })
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error getting performance stats: {e}")
+            return {"error": str(e)}

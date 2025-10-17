@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 import logging
 import random
 from src.core.model_loader import ModelLoader
@@ -207,3 +207,162 @@ class InferenceEngine:
                     spectrum[i] > prominence):
                     peaks.append(i)
             return peaks
+
+    @classmethod
+    async def predict_purity_scalar(cls, wavelengths: List[float], intensities: List[float]) -> float:
+        """
+        Predict purity as a single scalar value (for 2D scanning)
+        
+        Args:
+            wavelengths: Wavelength values
+            intensities: Intensity values
+        
+        Returns:
+            Purity score as float (0-100)
+        """
+        try:
+            result = await cls.predict(wavelengths, intensities)
+            return result.get("purity_percentage", np.nan)
+        except Exception as e:
+            logger.error(f"Scalar prediction error: {e}")
+            return np.nan
+    
+    @classmethod
+    async def predict_batch_scalar(cls, spectra_data: List[tuple]) -> List[float]:
+        """
+        Predict purity for multiple spectra (batch processing for performance)
+        
+        Args:
+            spectra_data: List of (wavelengths, intensities) tuples
+        
+        Returns:
+            List of purity scores
+        """
+        try:
+            purity_scores = []
+            
+            # For now, process sequentially (can be optimized for true batch inference)
+            for wavelengths, intensities in spectra_data:
+                try:
+                    purity = await cls.predict_purity_scalar(wavelengths, intensities)
+                    purity_scores.append(purity)
+                except Exception as e:
+                    logger.error(f"Batch item prediction error: {e}")
+                    purity_scores.append(np.nan)
+            
+            return purity_scores
+            
+        except Exception as e:
+            logger.error(f"Batch prediction error: {e}")
+            return [np.nan] * len(spectra_data)
+    
+    @classmethod
+    def predict_spectrum_sync(cls, processed_spectrum: np.ndarray) -> float:
+        """
+        Synchronous prediction for preprocessed spectrum (for scan orchestrator)
+        
+        Args:
+            processed_spectrum: Preprocessed spectrum array
+        
+        Returns:
+            Purity score as float
+        """
+        try:
+            model = ModelLoader.get_model()
+            model_type = ModelLoader.get_model_type()
+            
+            if model_type == "baseline":
+                return cls._predict_baseline_sync(processed_spectrum)
+            elif model_type == "plsr":
+                return cls._predict_plsr_sync(processed_spectrum)
+            elif model_type == "mock":
+                return cls._predict_mock_sync(processed_spectrum)
+            else:
+                logger.error(f"Unknown model type: {model_type}")
+                return np.nan
+                
+        except Exception as e:
+            logger.error(f"Sync prediction error: {e}")
+            return np.nan
+    
+    @classmethod
+    def _predict_baseline_sync(cls, spectrum: np.ndarray) -> float:
+        """Synchronous baseline model prediction"""
+        try:
+            model = ModelLoader.get_model()
+            input_tensor = torch.FloatTensor(spectrum).unsqueeze(0)
+            
+            with torch.no_grad():
+                output = model(input_tensor)
+                purity_logits = output.squeeze()
+                purity_percentage = torch.sigmoid(purity_logits).item() * 100
+                
+            return float(purity_percentage)
+            
+        except Exception as e:
+            logger.error(f"Baseline sync prediction error: {e}")
+            return cls._predict_mock_sync(spectrum)
+    
+    @classmethod
+    def _predict_plsr_sync(cls, spectrum: np.ndarray) -> float:
+        """Synchronous PLSR model prediction"""
+        try:
+            model_dict = ModelLoader.get_model()
+            regressor = model_dict["regressor"]
+            scaler = model_dict.get("scaler")
+            
+            input_data = spectrum.reshape(1, -1)
+            if scaler:
+                input_data = scaler.transform(input_data)
+            
+            purity_percentage = regressor.predict(input_data)[0]
+            purity_percentage = np.clip(purity_percentage, 0, 100)
+            
+            return float(purity_percentage)
+            
+        except Exception as e:
+            logger.error(f"PLSR sync prediction error: {e}")
+            return cls._predict_mock_sync(spectrum)
+    
+    @classmethod
+    def _predict_mock_sync(cls, spectrum: np.ndarray) -> float:
+        """Synchronous mock prediction"""
+        np.random.seed(int(np.sum(spectrum) * 1000) % 2**32)
+        
+        spectrum_std = np.std(spectrum)
+        spectrum_mean = np.mean(spectrum)
+        
+        base_purity = 70 + (spectrum_std * 30) + (spectrum_mean * 10)
+        base_purity = np.clip(base_purity, 60, 98)
+        
+        purity_percentage = base_purity + np.random.normal(0, 3)
+        purity_percentage = np.clip(purity_percentage, 55, 99)
+        
+        return float(purity_percentage)
+
+
+# Convenience functions for external use
+async def predict_spectrum(wavelengths: List[float], intensities: List[float]) -> float:
+    """
+    Convenience function to predict purity from spectrum
+    
+    Args:
+        wavelengths: Wavelength values
+        intensities: Intensity values
+    
+    Returns:
+        Purity score (0-100)
+    """
+    return await InferenceEngine.predict_purity_scalar(wavelengths, intensities)
+
+def predict_spectrum_preprocessed(processed_spectrum: np.ndarray) -> float:
+    """
+    Convenience function for preprocessed spectrum
+    
+    Args:
+        processed_spectrum: Preprocessed spectrum array
+    
+    Returns:
+        Purity score (0-100)
+    """
+    return InferenceEngine.predict_spectrum_sync(processed_spectrum)

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purity Vision Lab - 2D Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .control-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .visualization-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .status-display {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+
+        .status-display h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .heatmap-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #ddd;
+        }
+
+        .heatmap-container img {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 Purity Vision Lab</h1>
+            <p>2D Raman Spectroscopy Scanner</p>
+        </div>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="control-section">
+                    <h3>📐 Scan Parameters</h3>
+                    <div class="form-group">
+                        <label for="x_start">X Start (mm):</label>
+                        <input type="number" id="x_start" value="0" step="0.1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="y_start">Y Start (mm):</label>
+                        <input type="number" id="y_start" value="0" step="0.1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="x_end">X End (mm):</label>
+                        <input type="number" id="x_end" value="5" step="0.1" min="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="y_end">Y End (mm):</label>
+                        <input type="number" id="y_end" value="5" step="0.1" min="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="step_x">X Step (mm):</label>
+                        <input type="number" id="step_x" value="0.5" step="0.1" min="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="step_y">Y Step (mm):</label>
+                        <input type="number" id="step_y" value="0.5" step="0.1" min="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="integration_time">Integration Time (s):</label>
+                        <input type="number" id="integration_time" value="0.1" step="0.01" min="0.01" max="10">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>⚙️ Advanced Settings</h3>
+                    <div class="form-group">
+                        <label for="model_id">Model:</label>
+                        <select id="model_id">
+                            <option value="default">Default Model</option>
+                            <option value="baseline">Baseline Model</option>
+                            <option value="plsr">PLSR Model</option>
+                            <option value="mock">Mock Model</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="serpentine">
+                            <input type="checkbox" id="serpentine" checked> Serpentine Pattern
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch_size">Batch Size:</label>
+                        <input type="number" id="batch_size" value="1" min="1" max="10">
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>🎮 Controls</h3>
+                    <button class="btn btn-primary" id="startScan">🚀 Start Scan</button>
+                    <button class="btn btn-warning" id="pauseScan" disabled>⏸️ Pause</button>
+                    <button class="btn btn-success" id="resumeScan" disabled>▶️ Resume</button>
+                    <button class="btn btn-danger" id="cancelScan" disabled>🛑 Cancel</button>
+                    <button class="btn btn-primary" id="refreshStatus">🔄 Refresh</button>
+                </div>
+
+                <div class="control-section">
+                    <h3>🔧 Hardware</h3>
+                    <button class="btn btn-primary" id="homeStage">🏠 Home Stage</button>
+                    <button class="btn btn-danger" id="emergencyStop">🚨 Emergency Stop</button>
+                </div>
+            </div>
+
+            <div class="visualization-panel">
+                <div class="status-display">
+                    <h4>📊 Scan Status</h4>
+                    <div id="statusText">Ready to scan</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div id="progressText">0% complete</div>
+                </div>
+
+                <div class="heatmap-container" id="heatmapContainer">
+                    <div>
+                        <h3>🎯 Purity Heatmap</h3>
+                        <p>Start a scan to see results here</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid" id="statsGrid" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="meanPurity">--</div>
+                        <div class="stat-label">Mean Purity (%)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="minPurity">--</div>
+                        <div class="stat-label">Min Purity (%)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="maxPurity">--</div>
+                        <div class="stat-label">Max Purity (%)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedPoints">--</div>
+                        <div class="stat-label">Points Scanned</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL - adjust for your setup
+        const API_BASE = 'http://localhost:8001/api/ml';
+        
+        // UI elements
+        const startBtn = document.getElementById('startScan');
+        const pauseBtn = document.getElementById('pauseScan');
+        const resumeBtn = document.getElementById('resumeScan');
+        const cancelBtn = document.getElementById('cancelScan');
+        const refreshBtn = document.getElementById('refreshStatus');
+        const homeBtn = document.getElementById('homeStage');
+        const emergencyBtn = document.getElementById('emergencyStop');
+        
+        const statusText = document.getElementById('statusText');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const heatmapContainer = document.getElementById('heatmapContainer');
+        const statsGrid = document.getElementById('statsGrid');
+        
+        // Current scan state
+        let currentScanId = null;
+        let statusInterval = null;
+        
+        // Event listeners
+        startBtn.addEventListener('click', startScan);
+        pauseBtn.addEventListener('click', pauseScan);
+        resumeBtn.addEventListener('click', resumeScan);
+        cancelBtn.addEventListener('click', cancelScan);
+        refreshBtn.addEventListener('click', refreshStatus);
+        homeBtn.addEventListener('click', homeStage);
+        emergencyBtn.addEventListener('click', emergencyStop);
+        
+        // Utility functions
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            const container = document.querySelector('.visualization-panel');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+        
+        function updateButtonStates(status) {
+            const isIdle = status === 'idle';
+            const isRunning = status === 'running';
+            const isPaused = status === 'paused';
+            
+            startBtn.disabled = !isIdle;
+            pauseBtn.disabled = !isRunning;
+            resumeBtn.disabled = !isPaused;
+            cancelBtn.disabled = isIdle;
+        }
+        
+        // API functions
+        async function startScan() {
+            try {
+                const params = {
+                    x_start: parseFloat(document.getElementById('x_start').value),
+                    y_start: parseFloat(document.getElementById('y_start').value),
+                    x_end: parseFloat(document.getElementById('x_end').value),
+                    y_end: parseFloat(document.getElementById('y_end').value),
+                    step_x: parseFloat(document.getElementById('step_x').value),
+                    step_y: parseFloat(document.getElementById('step_y').value),
+                    integration_time: parseFloat(document.getElementById('integration_time').value),
+                    model_id: document.getElementById('model_id').value,
+                    serpentine: document.getElementById('serpentine').checked,
+                    batch_size: parseInt(document.getElementById('batch_size').value)
+                };
+                
+                const response = await fetch(`${API_BASE}/scan/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentScanId = result.scan_id;
+                    showAlert(`Scan started: ${currentScanId}`, 'success');
+                    startStatusPolling();
+                } else {
+                    showAlert(`Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function pauseScan() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/pause`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Scan paused', 'info');
+                } else {
+                    showAlert(`Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function resumeScan() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/resume`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Scan resumed', 'success');
+                } else {
+                    showAlert(`Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function cancelScan() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/cancel`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Scan cancelled', 'warning');
+                    stopStatusPolling();
+                } else {
+                    showAlert(`Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function refreshStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/status`);
+                const status = await response.json();
+                
+                updateStatus(status);
+                
+                if (status.status === 'completed') {
+                    await loadHeatmap();
+                    await loadScanSummary();
+                }
+            } catch (error) {
+                showAlert(`Error refreshing status: ${error.message}`, 'error');
+            }
+        }
+        
+        async function homeStage() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/hardware/home`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert(`Stage homed to (${result.position.x}, ${result.position.y})`, 'success');
+                } else {
+                    showAlert(`Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function emergencyStop() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/hardware/emergency_stop`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showAlert('Emergency stop activated!', 'error');
+                    stopStatusPolling();
+                } else {
+                    showAlert(`Error: ${result.detail}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`Network error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function loadHeatmap() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/result/heatmap?format=png&width=600&height=500`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const imageUrl = URL.createObjectURL(blob);
+                    
+                    heatmapContainer.innerHTML = `<img src="${imageUrl}" alt="Purity Heatmap">`;
+                } else {
+                    heatmapContainer.innerHTML = '<div><h3>❌ No heatmap available</h3></div>';
+                }
+            } catch (error) {
+                console.error('Error loading heatmap:', error);
+            }
+        }
+        
+        async function loadScanSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/scan/result/summary`);
+                const summary = await response.json();
+                
+                if (response.ok) {
+                    updateStats(summary.statistics);
+                    statsGrid.style.display = 'grid';
+                }
+            } catch (error) {
+                console.error('Error loading scan summary:', error);
+            }
+        }
+        
+        function updateStatus(status) {
+            statusText.textContent = `Status: ${status.status} | ${status.completed_points}/${status.total_points} points`;
+            
+            const progress = status.progress * 100;
+            progressFill.style.width = `${progress}%`;
+            progressText.textContent = `${progress.toFixed(1)}% complete`;
+            
+            if (status.estimated_remaining) {
+                progressText.textContent += ` | ETA: ${Math.round(status.estimated_remaining)}s`;
+            }
+            
+            updateButtonStates(status.status);
+            
+            if (status.status === 'completed') {
+                stopStatusPolling();
+                showAlert('Scan completed successfully!', 'success');
+            } else if (status.status === 'error') {
+                stopStatusPolling();
+                showAlert(`Scan failed: ${status.error_message}`, 'error');
+            }
+        }
+        
+        function updateStats(stats) {
+            document.getElementById('meanPurity').textContent = stats.mean?.toFixed(1) || '--';
+            document.getElementById('minPurity').textContent = stats.min?.toFixed(1) || '--';
+            document.getElementById('maxPurity').textContent = stats.max?.toFixed(1) || '--';
+            document.getElementById('completedPoints').textContent = stats.valid_points || '--';
+        }
+        
+        function startStatusPolling() {
+            if (statusInterval) clearInterval(statusInterval);
+            
+            statusInterval = setInterval(async () => {
+                await refreshStatus();
+            }, 2000); // Poll every 2 seconds
+        }
+        
+        function stopStatusPolling() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+            }
+        }
+        
+        // Initialize
+        refreshStatus();
+    </script>
+</body>
+</html>

@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from src.api.health import router as health_router
 from src.api.analyze import router as analyze_router
+from src.api.scan import router as scan_router
 from src.core.model_loader import ModelLoader
 from config import settings
 import logging
@@ -29,6 +31,10 @@ app.add_middleware(
 # Include routers
 app.include_router(health_router, prefix="/api/ml", tags=["health"])
 app.include_router(analyze_router, prefix="/api/ml", tags=["analysis"])
+app.include_router(scan_router, prefix="/api/ml/scan", tags=["scanning"])
+
+# Mount static files for demo frontend
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 async def startup_event():
@@ -41,6 +47,11 @@ async def startup_event():
     try:
         await ModelLoader.initialize()
         logger.info("✅ Model loaded successfully")
+        
+        # Optimize model for inference
+        ModelLoader.optimize_for_inference()
+        logger.info("✅ Model optimized for inference")
+        
     except Exception as e:
         logger.error(f"❌ Failed to load model: {e}")
         # Don't fail startup, but log the error
