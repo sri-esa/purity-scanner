@@ -14,6 +14,7 @@ import analyticsRouter from './src/routes/analytics.js';
 import scansRouter from './src/routes/scans.js';
 import sessionsRouter from './src/routes/sessions.js';
 import setupRouter from './src/routes/setup.js';
+import uploadRouter from './src/routes/upload.js';
 import { supabase, supabaseAuth } from './src/config/supabase.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 
@@ -29,7 +30,8 @@ console.log('[backend] Env check:', {
 
 app.use(helmet());
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
@@ -59,6 +61,9 @@ app.post('/api/analyze', async (req, res, next) => {
   }
 });
 
+// Public upload routes (no auth required)
+app.use('/api/upload', uploadRouter);
+
 // Root route - API information
 app.get('/', (req, res) => {
   const supabaseConfigured = !!(supabase && supabaseAuth);
@@ -70,6 +75,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       envCheck: '/env-check',
+      analyze: '/api/analyze',
+      upload: '/api/upload',
       devices: supabaseConfigured ? '/api/devices' : 'unavailable (configure Supabase)',
       analytics: supabaseConfigured ? '/api/analytics' : 'unavailable (configure Supabase)',
       scans: supabaseConfigured ? '/api/scans' : 'unavailable (configure Supabase)',

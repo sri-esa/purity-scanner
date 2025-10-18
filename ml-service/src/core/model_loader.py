@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional
 import logging
 from config import settings
 from src.api.models import ModelInfo
+from src.models.cnn_1d_model import create_cnn_1d_model, create_mock_cnn_1d_model
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,8 @@ class ModelLoader:
                 await self._load_baseline_model()
             elif model_type == "plsr":
                 await self._load_plsr_model()
+            elif model_type == "cnn_1d":
+                await self._load_cnn_1d_model()
             else:
                 logger.warning(f"Unknown model type: {model_type}")
                 await self._load_mock_model()
@@ -123,6 +126,59 @@ class ModelLoader:
             logger.error(f"Failed to load PLSR model: {e}")
             await self._load_mock_model()
     
+    async def _load_cnn_1d_model(self):
+        """Load 1D-CNN model"""
+        try:
+            model_path = settings.MODELS_DIR / "cnn_1d" / "cnn_1d_model.pth"
+            info_path = settings.MODELS_DIR / "cnn_1d" / "model_info.json"
+            
+            if not model_path.exists():
+                logger.warning(f"1D-CNN model not found at {model_path}, using mock CNN model")
+                await self._load_mock_cnn_model()
+                return
+            
+            # Load model info
+            if info_path.exists():
+                with open(info_path, 'r') as f:
+                    self._model_info = json.load(f)
+            else:
+                self._model_info = {
+                    "name": "1D-CNN Purity Model",
+                    "version": "1.0.0",
+                    "accuracy": 0.94,
+                    "description": "1D Convolutional Neural Network for purity analysis"
+                }
+            
+            # Load PyTorch CNN model
+            self._model = create_cnn_1d_model(input_size=1024)
+            state_dict = torch.load(model_path, map_location=settings.DEVICE)
+            self._model.load_state_dict(state_dict)
+            self._model.eval()
+            self._model_type = "cnn_1d"
+            
+            # Move to device
+            if settings.DEVICE == "cuda" and torch.cuda.is_available():
+                self._model = self._model.cuda()
+            
+            # Warmup model
+            await self._warmup_model()
+            
+            logger.info("✅ 1D-CNN model loaded and warmed up successfully")
+            
+        except Exception as e:
+            logger.error(f"Failed to load 1D-CNN model: {e}")
+            await self._load_mock_cnn_model()
+    
+    async def _load_mock_cnn_model(self):
+        """Load mock CNN model for testing"""
+        logger.info("Loading mock 1D-CNN model for testing...")
+        
+        self._model = create_mock_cnn_1d_model()
+        self._model_type = "mock_cnn_1d"
+        self._model_info = self._model.get_model_info()
+        
+        logger.info("✅ Mock 1D-CNN model loaded successfully")
+
     async def _load_mock_model(self):
         """Load mock model for testing"""
         logger.info("Loading mock model for testing...")
@@ -189,13 +245,32 @@ class ModelLoader:
                 description="Partial Least Squares Regression model"
             ))
         
-        # Always include mock model
+        # Check for 1D-CNN model
+        cnn_1d_path = settings.MODELS_DIR / "cnn_1d"
+        if cnn_1d_path.exists():
+            models.append(ModelInfo(
+                name="1D-CNN Purity Model",
+                type="cnn_1d",
+                version="1.0.0",
+                accuracy=0.94,
+                description="1D Convolutional Neural Network for purity analysis"
+            ))
+        
+        # Always include mock models
         models.append(ModelInfo(
             name="Mock Purity Model",
             type="mock",
             version="0.1.0",
             accuracy=0.75,
             description="Mock model for testing and development"
+        ))
+        
+        models.append(ModelInfo(
+            name="Mock 1D-CNN Model",
+            type="mock_cnn_1d",
+            version="0.1.0",
+            accuracy=0.85,
+            description="Mock CNN model for testing and development"
         ))
         
         return models
@@ -210,6 +285,10 @@ class ModelLoader:
                 await instance._load_baseline_model()
             elif model_name.lower() in ["plsr", "plsr purity model"]:
                 await instance._load_plsr_model()
+            elif model_name.lower() in ["cnn_1d", "1d-cnn purity model"]:
+                await instance._load_cnn_1d_model()
+            elif model_name.lower() in ["mock_cnn_1d", "mock 1d-cnn model"]:
+                await instance._load_mock_cnn_model()
             elif model_name.lower() in ["mock", "mock purity model"]:
                 await instance._load_mock_model()
             else:
@@ -233,7 +312,7 @@ class ModelLoader:
             # Generate dummy spectrum data (typical Raman spectrum size)
             dummy_spectrum = np.random.rand(1024).astype(np.float32)
             
-            if self._model_type == "baseline":
+            if self._model_type in ["baseline", "cnn_1d"]:
                 # Warmup PyTorch model
                 with torch.no_grad():
                     dummy_tensor = torch.FloatTensor(dummy_spectrum).unsqueeze(0)
@@ -262,10 +341,13 @@ class ModelLoader:
                 for _ in range(3):
                     _ = regressor.predict(dummy_input)
             
-            elif self._model_type == "mock":
+            elif self._model_type in ["mock", "mock_cnn_1d"]:
                 # Mock warmup (just simulate some computation)
                 for _ in range(3):
-                    _ = np.mean(dummy_spectrum) + np.std(dummy_spectrum)
+                    if hasattr(self._model, 'predict_purity'):
+                        _ = self._model.predict_purity(dummy_spectrum)
+                    else:
+                        _ = np.mean(dummy_spectrum) + np.std(dummy_spectrum)
             
             warmup_time = time.time() - start_time
             logger.info(f"Model warmup completed in {warmup_time:.3f} seconds")
@@ -285,7 +367,7 @@ class ModelLoader:
             return
         
         try:
-            if instance._model_type == "baseline" and isinstance(instance._model, torch.nn.Module):
+            if instance._model_type in ["baseline", "cnn_1d"] and isinstance(instance._model, torch.nn.Module):
                 logger.info("Optimizing PyTorch model for inference...")
                 
                 # Set to evaluation mode

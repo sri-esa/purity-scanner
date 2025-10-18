@@ -16,7 +16,7 @@ class Settings:
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     
     # Model
-    MODEL_TYPE = os.getenv("MODEL_TYPE", "baseline")
+    MODEL_TYPE = os.getenv("MODEL_TYPE", "mock_cnn_1d")
     MODEL_PATH = os.getenv("MODEL_PATH", "models/baseline/purityscan_huggingface.pth")
     SPECTRUM_LENGTH = int(os.getenv("SPECTRUM_LENGTH", "1024"))
     

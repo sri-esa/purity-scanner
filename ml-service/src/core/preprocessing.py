@@ -1,5 +1,6 @@
 import numpy as np
-from scipy import signal
+from scipy import signal, sparse
+from scipy.sparse.linalg import spsolve
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from typing import Tuple, List, Optional
 import logging
@@ -37,20 +38,60 @@ class SpectrumPreprocessor:
         else:
             raise ValueError(f"Unknown normalization method: {method}")
     
-    def remove_baseline(self, intensities: np.ndarray, method: str = "polynomial") -> np.ndarray:
+    def als_baseline_correction(self, intensities: np.ndarray, lam: float = 1e4, p: float = 0.01, niter: int = 10) -> np.ndarray:
+        """
+        Asymmetric Least Squares (ALS) baseline correction
+        
+        Args:
+            intensities: Raw intensity values
+            lam: Smoothness parameter (larger = smoother baseline)
+            p: Asymmetry parameter (0 < p < 1, smaller = more asymmetric)
+            niter: Number of iterations
+        
+        Returns:
+            Baseline-corrected intensities
+        """
+        intensities = np.array(intensities)
+        L = len(intensities)
+        
+        # Create difference matrix
+        D = sparse.diags([1, -2, 1], [0, -1, -2], shape=(L, L-2))
+        D = D.T
+        
+        # Initialize weights
+        w = np.ones(L)
+        
+        for i in range(niter):
+            # Create weight matrix
+            W = sparse.spdiags(w, 0, L, L)
+            
+            # Solve for baseline
+            Z = W + lam * D.dot(D.T)
+            baseline = spsolve(Z, w * intensities)
+            
+            # Update weights
+            w = p * (intensities > baseline) + (1 - p) * (intensities < baseline)
+        
+        return intensities - baseline
+
+    def remove_baseline(self, intensities: np.ndarray, method: str = "als") -> np.ndarray:
         """
         Remove baseline from spectrum
         
         Args:
             intensities: Raw intensity values
-            method: Baseline removal method
+            method: Baseline removal method ('als', 'polynomial', 'rolling_minimum')
         
         Returns:
             Baseline-corrected intensities
         """
         intensities = np.array(intensities)
         
-        if method == "polynomial":
+        if method == "als":
+            # Asymmetric Least Squares baseline correction
+            return self.als_baseline_correction(intensities)
+        
+        elif method == "polynomial":
             # Fit polynomial baseline and subtract
             x = np.arange(len(intensities))
             coeffs = np.polyfit(x, intensities, deg=3)
@@ -150,8 +191,8 @@ class SpectrumPreprocessor:
             # Preprocessing steps
             logger.debug("Starting spectrum preprocessing...")
             
-            # 1. Remove baseline
-            intensities = self.remove_baseline(intensities, method="polynomial")
+            # 1. Remove baseline using ALS
+            intensities = self.remove_baseline(intensities, method="als")
             
             # 2. Smooth spectrum
             intensities = self.smooth_spectrum(intensities, method="savgol")

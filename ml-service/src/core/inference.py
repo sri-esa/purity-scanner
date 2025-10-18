@@ -44,6 +44,10 @@ class InferenceEngine:
                 return await cls._predict_baseline(processed_spectrum)
             elif model_type == "plsr":
                 return await cls._predict_plsr(processed_spectrum)
+            elif model_type == "cnn_1d":
+                return await cls._predict_cnn_1d(processed_spectrum)
+            elif model_type == "mock_cnn_1d":
+                return await cls._predict_mock_cnn(processed_spectrum)
             elif model_type == "mock":
                 return await cls._predict_mock(processed_spectrum)
             else:
@@ -125,6 +129,56 @@ class InferenceEngine:
             # Fallback to mock prediction
             return await cls._predict_mock(spectrum)
     
+    @classmethod
+    async def _predict_cnn_1d(cls, spectrum: np.ndarray) -> Dict[str, Any]:
+        """
+        Predict using 1D-CNN model
+        """
+        try:
+            model = ModelLoader.get_model()
+            
+            # Use the model's predict_purity method
+            purity_percentage, confidence_score = model.predict_purity(spectrum)
+            
+            # Detect potential contaminants based on spectrum features
+            contaminants = cls._detect_contaminants(spectrum, purity_percentage)
+            
+            return {
+                "purity_percentage": round(purity_percentage, 2),
+                "confidence_score": round(confidence_score, 3),
+                "contaminants": contaminants
+            }
+            
+        except Exception as e:
+            logger.error(f"CNN 1D prediction error: {e}")
+            # Fallback to mock prediction
+            return await cls._predict_mock(spectrum)
+    
+    @classmethod
+    async def _predict_mock_cnn(cls, spectrum: np.ndarray) -> Dict[str, Any]:
+        """
+        Predict using mock CNN model
+        """
+        try:
+            model = ModelLoader.get_model()
+            
+            # Use the mock model's predict_purity method
+            purity_percentage, confidence_score = model.predict_purity(spectrum)
+            
+            # Detect potential contaminants based on spectrum features
+            contaminants = cls._detect_contaminants(spectrum, purity_percentage)
+            
+            return {
+                "purity_percentage": round(purity_percentage, 2),
+                "confidence_score": round(confidence_score, 3),
+                "contaminants": contaminants
+            }
+            
+        except Exception as e:
+            logger.error(f"Mock CNN prediction error: {e}")
+            # Fallback to basic mock prediction
+            return await cls._predict_mock(spectrum)
+
     @classmethod
     async def _predict_mock(cls, spectrum: np.ndarray) -> Dict[str, Any]:
         """
@@ -275,6 +329,10 @@ class InferenceEngine:
                 return cls._predict_baseline_sync(processed_spectrum)
             elif model_type == "plsr":
                 return cls._predict_plsr_sync(processed_spectrum)
+            elif model_type == "cnn_1d":
+                return cls._predict_cnn_1d_sync(processed_spectrum)
+            elif model_type == "mock_cnn_1d":
+                return cls._predict_mock_cnn_sync(processed_spectrum)
             elif model_type == "mock":
                 return cls._predict_mock_sync(processed_spectrum)
             else:
@@ -324,6 +382,30 @@ class InferenceEngine:
             logger.error(f"PLSR sync prediction error: {e}")
             return cls._predict_mock_sync(spectrum)
     
+    @classmethod
+    def _predict_cnn_1d_sync(cls, spectrum: np.ndarray) -> float:
+        """Synchronous CNN 1D model prediction"""
+        try:
+            model = ModelLoader.get_model()
+            purity_percentage, _ = model.predict_purity(spectrum)
+            return float(purity_percentage)
+            
+        except Exception as e:
+            logger.error(f"CNN 1D sync prediction error: {e}")
+            return cls._predict_mock_sync(spectrum)
+    
+    @classmethod
+    def _predict_mock_cnn_sync(cls, spectrum: np.ndarray) -> float:
+        """Synchronous mock CNN model prediction"""
+        try:
+            model = ModelLoader.get_model()
+            purity_percentage, _ = model.predict_purity(spectrum)
+            return float(purity_percentage)
+            
+        except Exception as e:
+            logger.error(f"Mock CNN sync prediction error: {e}")
+            return cls._predict_mock_sync(spectrum)
+
     @classmethod
     def _predict_mock_sync(cls, spectrum: np.ndarray) -> float:
         """Synchronous mock prediction"""

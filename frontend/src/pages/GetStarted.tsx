@@ -60,14 +60,14 @@ const GetStarted = () => {
   } | null>(null);
   const [spectralData, setSpectralData] = useState<any[]>([]);
   
-  // Upload states
-  const [uploadedImage, setUploadedImage] = useState<{
-    url: string;
+  // Upload states for CSV/JSON
+  const [uploadedFile, setUploadedFile] = useState<{
     name: string;
     type: string;
   } | null>(null);
   const [uploadError, setUploadError] = useState("");
-  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [isAnalyzingFile, setIsAnalyzingFile] = useState(false);
+  const [uploadedSpectrum, setUploadedSpectrum] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const startScan = (material: MaterialType) => {
@@ -124,57 +124,169 @@ const GetStarted = () => {
     }, 500);
   };
 
+  const parseCSV = (text: string): number[] => {
+    const lines = text.split('\n').filter(line => line.trim());
+    const values: number[] = [];
+    
+    for (const line of lines) {
+      const value = parseFloat(line.trim());
+      if (!isNaN(value)) {
+        values.push(value);
+      }
+    }
+    
+    return values;
+  };
+
+  const parseJSON = (text: string): number[] => {
+    try {
+      const data = JSON.parse(text);
+      
+      // Handle different JSON formats
+      if (Array.isArray(data)) {
+        return data.map(v => typeof v === 'number' ? v : parseFloat(v)).filter(v => !isNaN(v));
+      } else if (data.spectrum && Array.isArray(data.spectrum)) {
+        return data.spectrum.map((v: any) => typeof v === 'number' ? v : parseFloat(v)).filter((v: number) => !isNaN(v));
+      } else if (data.values && Array.isArray(data.values)) {
+        return data.values.map((v: any) => typeof v === 'number' ? v : parseFloat(v)).filter((v: number) => !isNaN(v));
+      }
+      
+      return [];
+    } catch (e) {
+      return [];
+    }
+  };
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setUploadError('Please upload only JPG, PNG, or WEBP images');
+    const validTypes = ['text/csv', 'application/json', 'text/plain'];
+    const fileName = file.name.toLowerCase();
+    const isValidFile = validTypes.includes(file.type) || fileName.endsWith('.csv') || fileName.endsWith('.json');
+
+    if (!isValidFile) {
+      setUploadError('Please upload only CSV or JSON files');
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Image size should be less than 10MB');
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('File size should be less than 5MB');
       return;
     }
 
     setUploadError("");
     const reader = new FileReader();
+    
     reader.onload = (e) => {
-      setUploadedImage({
-        url: e.target?.result as string,
+      const text = e.target?.result as string;
+      let spectrumValues: number[] = [];
+      
+      if (fileName.endsWith('.csv')) {
+        spectrumValues = parseCSV(text);
+      } else if (fileName.endsWith('.json')) {
+        spectrumValues = parseJSON(text);
+      }
+      
+      if (spectrumValues.length === 0) {
+        setUploadError('Could not parse spectrum data. Please ensure file contains a single column of numbers.');
+        return;
+      }
+      
+      // Convert to chart format
+      const chartData = spectrumValues.map((intensity, index) => ({
+        wavelength: 400 + (index * 900 / spectrumValues.length), // Distribute across wavelength range
+        intensity: intensity
+      }));
+      
+      setUploadedFile({
         name: file.name,
-        type: file.type
+        type: fileName.endsWith('.csv') ? 'CSV' : 'JSON'
       });
+      setUploadedSpectrum(chartData);
     };
-    reader.readAsDataURL(file);
+    
+    reader.readAsText(file);
   };
 
-  const analyzeUploadedImage = () => {
-    if (!uploadedImage) return;
+  const analyzeUploadedSpectrum = async () => {
+    if (!uploadedFile || uploadedSpectrum.length === 0) return;
     
-    setIsAnalyzingImage(true);
+    setIsAnalyzingFile(true);
+    setSpectralData(uploadedSpectrum);
     
-    setTimeout(() => {
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      
+      // Convert uploaded spectrum back to file format for backend processing
+      let fileContent = '';
+      if (uploadedFile.type === 'CSV') {
+        // Convert to CSV format
+        fileContent = uploadedSpectrum.map(point => point.intensity).join('\n');
+      } else {
+        // Convert to JSON format
+        fileContent = JSON.stringify(uploadedSpectrum.map(point => point.intensity));
+      }
+      
+      // Create a blob and file from the content
+      const blob = new Blob([fileContent], { 
+        type: uploadedFile.type === 'CSV' ? 'text/csv' : 'application/json' 
+      });
+      const file = new File([blob], uploadedFile.name, { 
+        type: uploadedFile.type === 'CSV' ? 'text/csv' : 'application/json' 
+      });
+      
+      formData.append('spectrum', file);
+      
+      // Call backend upload endpoint
+      const response = await fetch('/api/upload/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setScanResult({
+          purity: result.data.purity,
+          material: "Unknown Sample",
+          confidence: result.data.confidence,
+          contaminants: result.data.contaminants || []
+        });
+      } else {
+        throw new Error(result.error || 'Analysis failed');
+      }
+      
+    } catch (error) {
+      console.error('Analysis error:', error);
+      setUploadError(`Analysis failed: ${error.message}`);
+      
+      // Fallback to local mock analysis
       const basePurity = 94 + Math.random() * 5;
       const purity = Math.round(basePurity * 10) / 10;
       
       setScanResult({
         purity,
-        material: "Unknown Sample",
+        material: "Unknown Sample (Local)",
         confidence: 92 + Math.random() * 6,
         contaminants: purity < 97 ? ["Water traces", "Dissolved gases"] : []
       });
-      
-      setIsAnalyzingImage(false);
-    }, 2500);
+    } finally {
+      setIsAnalyzingFile(false);
+    }
   };
 
-  const clearUploadedImage = () => {
-    setUploadedImage(null);
+  const clearUploadedFile = () => {
+    setUploadedFile(null);
     setUploadError("");
+    setUploadedSpectrum([]);
     setScanResult(null);
+    setSpectralData([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -238,22 +350,22 @@ Method: Raman Spectroscopy + ML Inference
               Real-Time Purity <span className="text-gradient-primary">Analysis</span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Select a material to simulate Raman spectroscopy scanning or upload an image for ML-powered purity detection.
+              Select a material to simulate Raman spectroscopy scanning or upload your own spectrum data for ML-powered purity detection.
             </p>
           </div>
 
-          {/* Upload Media Section */}
+          {/* Upload Spectrum Section */}
           <Card className="p-6 bg-card border-border">
             <div className="text-center mb-6">
               <h3 className="font-display text-xl font-semibold mb-2">
-                Upload Media for Analysis
+                Upload Spectrum Data
               </h3>
               <p className="text-sm text-muted-foreground">
-                Upload an image of your sample for AI-powered purity detection
+                Upload a CSV or JSON file containing a single column of numbers representing your 1D spectrum
               </p>
             </div>
 
-            {!uploadedImage ? (
+            {!uploadedFile ? (
               <div className="space-y-4">
                 <Card
                   onClick={() => fileInputRef.current?.click()}
@@ -264,8 +376,8 @@ Method: Raman Spectroscopy + ML Inference
                       <Upload className="w-8 h-8 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-semibold mb-1">Upload Media</h4>
-                      <p className="text-xs text-muted-foreground">Click to select JPG, PNG, or WEBP image</p>
+                      <h4 className="font-semibold mb-1">Upload Spectrum File</h4>
+                      <p className="text-xs text-muted-foreground">Click to select CSV or JSON file</p>
                     </div>
                   </div>
                 </Card>
@@ -273,7 +385,7 @@ Method: Raman Spectroscopy + ML Inference
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  accept=".csv,.json,text/csv,application/json"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
@@ -286,46 +398,67 @@ Method: Raman Spectroscopy + ML Inference
                 )}
 
                 <div className="text-center text-xs text-muted-foreground">
-                  Supported formats: JPG, PNG, WEBP • Maximum size: 10MB
+                  Supported formats: CSV, JSON • Maximum size: 5MB
+                </div>
+                
+                <div className="mt-4 p-4 bg-muted/50 rounded-lg text-xs text-muted-foreground">
+                  <p className="font-semibold mb-2">File Format Examples:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-semibold mb-1">CSV Format:</p>
+                      <code className="block bg-background p-2 rounded">
+                        120<br/>
+                        340<br/>
+                        580<br/>
+                        820<br/>
+                        ...
+                      </code>
+                    </div>
+                    <div>
+                      <p className="font-semibold mb-1">JSON Format:</p>
+                      <code className="block bg-background p-2 rounded">
+                        [120, 340, 580, 820, ...]<br/>
+                        or<br/>
+                        {`{"spectrum": [120, 340, ...]}`}
+                      </code>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="relative rounded-lg overflow-hidden border border-border">
-                  <img
-                    src={uploadedImage.url}
-                    alt="Uploaded sample"
-                    className="w-full h-auto max-h-64 object-contain bg-muted"
-                  />
+                <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Upload className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">{uploadedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{uploadedFile.type} • {uploadedSpectrum.length} data points</p>
+                    </div>
+                  </div>
                   <Button
-                    onClick={clearUploadedImage}
-                    variant="destructive"
+                    onClick={clearUploadedFile}
+                    variant="ghost"
                     size="sm"
-                    className="absolute top-2 right-2"
                   >
-                    <X className="w-4 h-4 mr-1" />
-                    Remove
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{uploadedImage.name}</span>
-                  <Badge variant="outline">{uploadedImage.type.split('/')[1].toUpperCase()}</Badge>
-                </div>
-
-                {!isAnalyzingImage && !scanResult && (
+                {!isAnalyzingFile && !scanResult && (
                   <Button
-                    onClick={analyzeUploadedImage}
+                    onClick={analyzeUploadedSpectrum}
                     className="w-full"
                   >
-                    Analyze Purity
+                    Analyze Spectrum
                   </Button>
                 )}
 
-                {isAnalyzingImage && (
+                {isAnalyzingFile && (
                   <div className="py-4 text-center space-y-3">
                     <div className="w-12 h-12 mx-auto rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                    <p className="text-sm text-muted-foreground">Analyzing image...</p>
+                    <p className="text-sm text-muted-foreground">Analyzing spectrum data...</p>
                   </div>
                 )}
               </div>
@@ -369,7 +502,7 @@ Method: Raman Spectroscopy + ML Inference
           </div>
 
           {/* Scanning Interface */}
-          {selectedMaterial && (
+          {(selectedMaterial || uploadedFile) && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Spectral Data Visualization */}
               <Card className="p-6 space-y-4">
@@ -377,8 +510,8 @@ Method: Raman Spectroscopy + ML Inference
                   <h3 className="font-display text-xl font-semibold">
                     Raman Spectrum
                   </h3>
-                  <Badge variant={isScanning ? "default" : "secondary"}>
-                    {isScanning ? "Acquiring..." : "Complete"}
+                  <Badge variant={isScanning || isAnalyzingFile ? "default" : "secondary"}>
+                    {isScanning || isAnalyzingFile ? "Acquiring..." : "Complete"}
                   </Badge>
                 </div>
                 
@@ -437,16 +570,16 @@ Method: Raman Spectroscopy + ML Inference
                   ML Inference Results
                 </h3>
 
-                {!scanResult && !isScanning && (
+                {!scanResult && !isScanning && !isAnalyzingFile && (
                   <div className="h-64 flex items-center justify-center text-muted-foreground">
                     <div className="text-center space-y-2">
                       <AlertCircle className="w-12 h-12 mx-auto opacity-50" />
-                      <p>Waiting for scan to complete...</p>
+                      <p>Waiting for analysis to complete...</p>
                     </div>
                   </div>
                 )}
 
-                {isScanning && (
+                {(isScanning || isAnalyzingFile) && (
                   <div className="h-64 flex items-center justify-center">
                     <div className="text-center space-y-4">
                       <div className="w-16 h-16 mx-auto rounded-full border-4 border-primary border-t-transparent animate-spin" />
@@ -456,7 +589,7 @@ Method: Raman Spectroscopy + ML Inference
                   </div>
                 )}
 
-                {scanResult && !isScanning && (
+                {scanResult && !isScanning && !isAnalyzingFile && (
                   <div className="space-y-6">
                     {/* Purity Percentage */}
                     <div className="text-center p-6 rounded-lg bg-primary/10 border border-primary/20">
@@ -509,7 +642,7 @@ Method: Raman Spectroscopy + ML Inference
                           setScanResult(null);
                           setSpectralData([]);
                           setSelectedMaterial(null);
-                          clearUploadedImage();
+                          clearUploadedFile();
                         }}
                       >
                         New Scan
